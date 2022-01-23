@@ -2,7 +2,7 @@ import { Markup, Telegraf } from 'telegraf';
 import CloudConvert from 'cloudconvert';
 import fs from 'fs'
 import https from 'https'
-import { telegram_token, cloudconvert_token } from './token'
+import { telegram_token, cloudconvert_token } from './token.js'
 
 const bot = new Telegraf(telegram_token)
 const cloudConvert = new CloudConvert(cloudconvert_token)
@@ -30,34 +30,43 @@ bot.command("start", (ctx) => {
 // Test Only
 bot.command("test", ctx => {
 	ctx.reply("Hey", Markup.forceReply())
+
+	const sendUrl = "https://files.catbox.moe/test.pdf"
+
+	ctx.replyWithDocument({ source: "./out/test.epub.azw3" })
+	// bot.telegram.sendDocument(ctx.chat.id, "./out/test.epub.azw3").catch(err => console.log(err))
 })
 
 bot.on("message", (ctx, next) => {
 	if (ctx.message.document) {
-		ctx.reply("target format is?", Markup.forceReply())
-
 		data.file_id = ctx.message.document.file_id
 		data.file_name = ctx.message.document.file_name
 		data.file_size = ctx.message.document.file_size
-
 		let l = bot.telegram.getFileLink(data.file_id)
 		l.then(link => {
 			data.file_link = link.href
 			console.log(link.href)
 			console.log(data.file_link, data.file_name, data.format.after)
-			// CC(data.file_url, data.file_name, data.format.after)
 		})
-	}
 
+		ctx.reply("target format is?", Markup.forceReply())
+
+	}
+	
 	if (ctx.message.reply_to_message) {
 		data.format.after = ctx.message.text
+		
+		CC(data.file_link, data.file_name, data.format.after, ctx.chat.id).then( () => {
+			ctx.replyWithDocument({ source: `./out/${data.file_name}.${data.format.after}` })
+		})
+		console.log(data.file_link, data.file_name, data.format.after, ctx.chat.id)
 	}
 })
 
 bot.launch()
 
 // CC
-async function CC(url, name, format) {
+async function CC(url, name, format, id) {
 	let job = await cloudConvert.jobs.create({
 		"tasks": {
 			"import-my-file": {
@@ -67,7 +76,7 @@ async function CC(url, name, format) {
 			"convert-my-file": {
 				"operation": "convert",
 				"input": "import-my-file",
-				"output_format": data.format.after
+				"output_format": format
 			},
 			"export-my-file": {
 				"operation": "export/url",
@@ -91,7 +100,8 @@ async function CC(url, name, format) {
 
 	// TODO: Send to telegram
 	https.get(file.url, function (response) {
-		response.pipe(writeStream);
+		response.pipe(writeStream)
+		// bot.telegram.sendDocument(id, `./out/${name}.${format}`).catch(err => console.log(err))
 	});
 
 	await new Promise((resolve, reject) => {
