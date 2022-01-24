@@ -31,13 +31,14 @@ bot.command("start", (ctx) => {
 bot.command("test", ctx => {
 	ctx.reply("Hey", Markup.forceReply())
 
-	const sendUrl = "https://files.catbox.moe/test.pdf"
+	const sendUrl = "https://example.com/test.pdf"
 
 	ctx.replyWithDocument({ source: "./out/test.epub.azw3" })
 	// bot.telegram.sendDocument(ctx.chat.id, "./out/test.epub.azw3").catch(err => console.log(err))
 })
 
 bot.on("message", (ctx, next) => {
+	// TODO: File must less than 20MB
 	if (ctx.message.document) {
 		data.file_id = ctx.message.document.file_id
 		data.file_name = ctx.message.document.file_name
@@ -98,7 +99,6 @@ async function CC(url, name, format, id) {
 
 	const writeStream = fs.createWriteStream('./out/' + `${name}.${format}`);
 
-	// TODO: Send to telegram
 	https.get(file.url, function (response) {
 		response.pipe(writeStream)
 		// bot.telegram.sendDocument(id, `./out/${name}.${format}`).catch(err => console.log(err))
